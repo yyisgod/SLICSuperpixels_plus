@@ -190,9 +190,8 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		SLIC slic;
 		slic.setModel(model);
 		slic.DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels(img, width, height, labels, numlabels, m_nums, m_m);
-		//slic.DoSuperpixelSegmentation_ForGivenSuperpixelSize(img, width, height, labels, numlabels, 10, m_compactness);//demo
 		slic.DrawContoursAroundSegments(img, labels, width, height, 0);
-		if (labels) delete[] labels;
+		delete[] labels;
 
 		string addPath = "_C";//append outfilename
 		std::stringstream ss;

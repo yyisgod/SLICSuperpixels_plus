@@ -132,26 +132,13 @@ private:
 	//============================================================================
 	// Pick seeds for superpixels when step size of superpixels is given.
 	//============================================================================
-	void GetLABXYSeeds_ForGivenStepSize(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
+	void GetSeeds_ForGivenStepSize(
+		vector<vector<double> >&				kseeds,
+		vector<vector<double> >&				kseedsxy,
 		const int&					STEP,
 		const bool&					perturbseeds,
 		const vector<double>&		edgemag);
-	//============================================================================
-	// Pick seeds for supervoxels
-	//============================================================================
-	void GetKValues_LABXYZ(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
-		vector<double>&				kseedsz,
-		const int&					STEP);
+	
 	//============================================================================
 	// Move the superpixel seeds to low gradient positions to avoid putting seeds
 	// at region boundaries.
@@ -166,13 +153,7 @@ private:
 	//============================================================================
 	// Detect color edges, to help PerturbSeeds()
 	//============================================================================
-	void DetectLabEdges(
-		const double*				lvec,
-		const double*				avec,
-		const double*				bvec,
-		const int&					width,
-		const int&					height,
-		vector<double>&				edges);
+	void DetectLabEdges( vector<double>&				edges);
 	//============================================================================
 	// sRGB to XYZ conversion; helper for RGB2LAB()
 	//============================================================================
@@ -196,19 +177,7 @@ private:
 	//============================================================================
 	// sRGB to CIELAB conversion for 2-D images
 	//============================================================================
-	void DoRGBtoLABConversion(
-		const unsigned int*&		ubuff,
-		double*&					lvec,
-		double*&					avec,
-		double*&					bvec);
-	//============================================================================
-	// sRGB to CIELAB conversion for 3-D volumes
-	//============================================================================
-	void DoRGBtoLABConversion(
-		unsigned int**&				ubuff,
-		double**&					lvec,
-		double**&					avec,
-		double**&					bvec);
+	void DoRGBtoLABConversion(const unsigned int*&		ubuff);
 	//============================================================================
 	// Post-processing of SLIC segmentation, to avoid stray labels.
 	//============================================================================
@@ -260,19 +229,21 @@ private:
 	double RGB2Gray(double red,double green,double blue);
 
 public:
+	void SLIC::DoSLIC(
+		const unsigned int*			ubuff,
+		const int					width,
+		const int					height,
+		int*&						klabels,
+		int&						numlabels,
+		const int&					superpixelsize,
+		const double&               compactness);
 
 private:
 	int										m_width;
 	int										m_height;
 	int										m_depth;
 
-	double*									m_lvec;
-	double*									m_avec;
-	double*									m_bvec;
-
-	double**								m_lvecvec;
-	double**								m_avecvec;
-	double**								m_bvecvec;
+	vector<vector<double> >					m_data;
 
 	int										m_model;   ///use for control the model(such as new method or old method , 0 = old, 1 = new
 };
