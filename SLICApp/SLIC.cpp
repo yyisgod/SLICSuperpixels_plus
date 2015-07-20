@@ -398,7 +398,7 @@ void SLIC::PerformSuperpixelSLIC(
 	double distxy;
 	for( int itr = 0; itr < 10; itr++ )
 	{
-		//outSeeds(itr,kseedsl,kseedsx,kseedsy);
+		outSeeds(itr,kseeds,kseedsxy);
 		distvec.assign(sz, DBL_MAX);
 		for( int n = 0; n < numk; n++ )
 		{
@@ -415,7 +415,7 @@ void SLIC::PerformSuperpixelSLIC(
 					int i = y*m_width + x;
 					dist = 0;
 					for (int j = 0; j < m_depth; j++) {
-						dist += (m_data[n][j] - kseeds[n][j]) * (m_data[n][j] - kseeds[n][j]);
+						dist += (m_data[i][j] - kseeds[n][j]) * (m_data[i][j] - kseeds[n][j]);
 					}
 
 					distxy =		(x - kseedsxy[n][0])*(x - kseedsxy[n][0]) +
@@ -452,8 +452,8 @@ void SLIC::PerformSuperpixelSLIC(
 				for (i = 0; i < m_depth; i++) {
 					sigma[klabels[ind]][i] += m_data[ind][i];
 				}
-				sigma[klabels[ind]][i] += c;
-				sigma[klabels[ind]][i+1] += r;
+				sigma[klabels[ind]][m_depth] += c;
+				sigma[klabels[ind]][m_depth+1] += r;
 				//------------------------------------
 				//edgesum[klabels[ind]] += edgemag[ind];
 				//------------------------------------
@@ -1243,54 +1243,57 @@ void SLIC::setModel(int model)
 //	return AV;
 //}
 //
-//void SLIC::outSeeds(
-//		int							n,
-//		vector<double>&				kseedsl,
-//		vector<double>&				kseedsx,
-//		vector<double>&				kseedsy)
-//{
-//	string str = "kseeds = [";
-//	string filename = "E:\\source\\Matlab\\SLIC\\Seed";
-//	std::stringstream ss;
-//	std::string str1;
-//	ss << n;
-//	ss >> str1;
-//	filename += str1;
-//	filename += ".m";
-//	ss.clear();
-//	str1.clear();
-//
-//	int length = kseedsl.size();
-//
-//
-//	for (int i = 0; i < length; i++)
-//	{
-//		str +=" struct('gray',";
-//		std::stringstream ss;
-//		std::string str1;
-//		ss << kseedsl[i];
-//		ss >> str1;
-//		str += str1;
-//		str += ",'x',";
-//		str1.clear();
-//		ss.clear();
-//		ss << kseedsy[i];
-//		ss >> str1;
-//		str += str1;
-//		str += ",'y',";
-//		ss.clear();
-//		str1.clear();
-//		ss << kseedsx[i];
-//		ss >> str1;
-//		str += str1;
-//		str += ")";
-//	}
-//	
-//	str += "];";
-//	ofstream outFile(filename);
-//	outFile << str;
-//	outFile.close();
-//}
+
+/***************************************************************************
+*输出种子以供调试
+***************************************************/
+void SLIC::outSeeds(
+		int							n,
+		vector<vector<double> >&				kseeds,
+		vector<vector<double> >&				kseedsxy)
+{
+	string str = "kseeds = [";
+	string filename = "E:\\source\\Matlab\\SLIC\\Seed";
+	std::stringstream ss;
+	std::string str1;
+	ss << n;
+	ss >> str1;
+	filename += str1;
+	filename += ".m";
+	ss.clear();
+	str1.clear();
+
+	int length = kseeds.size();
+
+
+	for (int i = 0; i < length; i++)
+	{
+		str +=" struct('gray',";
+		std::stringstream ss;
+		std::string str1;
+		ss << kseeds[i][0];
+		ss >> str1;
+		str += str1;
+		str += ",'x',";
+		str1.clear();
+		ss.clear();
+		ss << kseedsxy[i][1];
+		ss >> str1;
+		str += str1;
+		str += ",'y',";
+		ss.clear();
+		str1.clear();
+		ss << kseedsxy[i][0];
+		ss >> str1;
+		str += str1;
+		str += ")";
+	}
+	
+	str += "];";
+	ofstream outFile(filename);
+	outFile << str;
+	outFile.close();
+}
 
 double SLIC::RGB2Gray(double red,double green,double blue){
 	return red*0.299 + green * 0.587 + blue * 0.114;

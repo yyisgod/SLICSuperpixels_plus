@@ -199,9 +199,8 @@ public:
 	
 	void outSeeds(
 		int							n,
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy);
+		vector<vector<double> >&				kseedsl,
+		vector<vector<double> >&				kseedsxy);
 private:
 	//===================
 	//calculate the average of vector l a b
