@@ -94,11 +94,8 @@ private:
 	// The main SLIC algorithm for generating superpixels
 	//============================================================================
 	void PerformSuperpixelSLIC(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
+		vector< vector<double> >&				kseeds,
+		vector<vector<double> >&				kseedsxy,
 		int*&						klabels,
 		const int&					STEP,
                 const vector<double>&		edgemag,
@@ -116,19 +113,7 @@ private:
 		const int&					STEP,
                 const vector<double>&		edgemag,
 		const double&				m = 10.0);
-	//============================================================================
-	// The main SLIC algorithm for generating supervoxels
-	//============================================================================
-	void PerformSupervoxelSLIC(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
-		vector<double>&				kseedsz,
-		int**&						klabels,
-		const int&					STEP,
-		const double&				compactness);
+	
 	//============================================================================
 	// Pick seeds for superpixels when step size of superpixels is given.
 	//============================================================================
@@ -144,11 +129,8 @@ private:
 	// at region boundaries.
 	//============================================================================
 	void PerturbSeeds(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
+		vector<vector<double> >&				kseeds,
+		vector< vector<double> >&				kseedsxy,
 		const vector<double>&		edges);
 	//============================================================================
 	// Detect color edges, to help PerturbSeeds()
