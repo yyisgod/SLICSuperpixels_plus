@@ -164,6 +164,7 @@ HCURSOR CSLICAppDlg::OnQueryDragIcon()
 
 void CSLICAppDlg::OnBnClickedButtonOpen()
 {
+	_CrtSetBreakAlloc(489);
 	PictureHandler picHand;
 	vector<string> picvec(0);
 	picvec.resize(0);
