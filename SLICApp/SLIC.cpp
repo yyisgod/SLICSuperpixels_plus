@@ -1323,7 +1323,6 @@ void SLIC::DoSLIC(
 	m_data.assign(sz, vector<double>());
 	//klabels.resize( sz, -1 );
 	//--------------------------------------------------
-	klabels = new int[sz];
 	for (int s = 0; s < sz; s++) klabels[s] = -1;
 	//--------------------------------------------------
 	if (1)//LAB, the default option
