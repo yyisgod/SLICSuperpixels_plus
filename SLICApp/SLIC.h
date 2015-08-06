@@ -170,16 +170,13 @@ private:
 		int*&						nlabels,//input labels that need to be corrected to remove stray labels
 		int&						numlabels,//the number of labels changes in the end if segments are removed
 		const int&					K); //the number of superpixels desired by the user
+
 	//============================================================================
-	// Post-processing of SLIC supervoxel segmentation, to avoid stray labels.
+	// push more vector back the m_data;
 	//============================================================================
-	void EnforceSupervoxelLabelConnectivity(
-		int**&						labels,//input - previous labels, output - new labels
-		const int&					width,
-		const int&					height,
-		const int&					depth,
-		int&						numlabels,
-		const int&					STEP);
+	void push_vec(
+		const vector<vector<double> >&	data
+		);
 	//================================================================================
 	// This field is used by yy self
 	//================================================================================
@@ -201,6 +198,7 @@ public:
 		int							n,
 		vector<vector<double> >&				kseedsl,
 		vector<vector<double> >&				kseedsxy);
+
 private:
 	//===================
 	//calculate the average of vector l a b
@@ -216,8 +214,9 @@ public:
 		const int					height,
 		int*&						klabels,
 		int&						numlabels,
-		const int&					superpixelsize,
-		const double&               compactness);
+		const int&					K,
+		const double&               compactness,
+		const vector<vector<double> >& exData = vector<vector<double> >());
 
 private:
 	int										m_width;

@@ -883,7 +883,7 @@ void SLIC::DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels(
     const double&                                   compactness)//weight given to spatial distance
 {
 	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
-    DoSLIC(ubuff,width,height,klabels,numlabels,superpixelsize,compactness);
+    //DoSLIC(ubuff,width,height,klabels,numlabels,superpixelsize,compactness);
 }
 
 
@@ -1298,7 +1298,23 @@ void SLIC::outSeeds(
 double SLIC::RGB2Gray(double red,double green,double blue){
 	return red*0.299 + green * 0.587 + blue * 0.114;
 }
-
+//Ìí¼ÓÔªËØ
+void SLIC::push_vec(
+	const vector<vector<double> >&	data
+	) 
+{
+	if (data.size()) {
+		int len = data[0].size();
+		int oriLen = m_depth;
+		m_depth += len;
+		for (int i = 0; i < data.size(); i++) {
+			m_data[i].resize(m_depth + len);
+			for (int j = 0; j < len; j++) {
+				m_data[i][j + oriLen] = data[i][j];
+			}
+		}
+	}
+}
 /*=================================================================*/
 //  main
 ////////////////////////////////////////////////////////////////////////
@@ -1308,10 +1324,12 @@ void SLIC::DoSLIC(
 	const int					height,
 	int*&						klabels,
 	int&						numlabels,
-	const int&					superpixelsize,
-	const double&               compactness)
+	const int&					K,
+	const double&               compactness,
+	const vector<vector<double> >& exData)
 {
 	//------------------------------------------------
+	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
 	const int STEP = int(sqrt(double(superpixelsize)) + 0.5);
 	//------------------------------------------------
 
@@ -1350,6 +1368,8 @@ void SLIC::DoSLIC(
 	vector<vector<double> > kseedsxy(0);
 
 	m_depth = m_data[0].size(); //vector length();
+	if (exData.size())
+		push_vec(exData);
 	GetSeeds_ForGivenStepSize(kseeds, kseedsxy, STEP, perturbseeds, edgemag);
 	if (0 && m_model)
 		//PerformSuperpixelSLICnew(kseedsl, kseedsa, kseedsb, kseedsx, kseedsy, klabels, STEP, edgemag, compactness);

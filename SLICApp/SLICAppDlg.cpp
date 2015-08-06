@@ -190,7 +190,9 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		int numlabels(0);
 		SLIC slic;
 		slic.setModel(model);
-		slic.DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels(img, width, height, labels, numlabels, m_nums, m_m);
+		vector<vector<double> > exData(sz, vector<double>(2,1.1));
+
+		slic.DoSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
 		slic.DrawContoursAroundSegments(img, labels, width, height, 0);
 		delete[] labels;
 
