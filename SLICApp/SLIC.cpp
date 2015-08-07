@@ -1307,7 +1307,7 @@ void SLIC::push_vec(
 		int len = data[0].size();
 		int oriLen = m_depth;
 		m_depth += len;
-		for (int i = 0; i < data.size(); i++) {
+		for (size_t i = 0; i < data.size(); i++) {
 			m_data[i].resize(m_depth + len);
 			for (int j = 0; j < len; j++) {
 				m_data[i][j + oriLen] = data[i][j];

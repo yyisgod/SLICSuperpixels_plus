@@ -230,9 +230,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 *.txt
-SLICApp/res/SLICApp.ico
-*.rc2
-*.sln
-SLICApp/SLICApp.rc
-*.vcxproj
-SLICApp/SLICApp.vcxproj.filters
+#SLICApp/res/SLICApp.ico
+#*.rc2
+#*.sln
+#SLICApp/SLICApp.rc
+#*.vcxproj
+#SLICApp/SLICApp.vcxproj.filters
