@@ -25,85 +25,52 @@ class SLIC
 public:
 	SLIC();
 	virtual ~SLIC();
-	//============================================================================
-	// Superpixel segmentation for a given step size (superpixel size ~= step*step)
-	//============================================================================
-        void DoSuperpixelSegmentation_ForGivenSuperpixelSize(
-        const unsigned int*                            ubuff,//Each 32 bit unsigned int contains ARGB pixel values.
-		const int					width,
-		const int					height,
-		int*&						klabels,
-		int&						numlabels,
-                const int&					superpixelsize,
-                const double&                                   compactness);
-	//============================================================================
-	// Superpixel segmentation for a given number of superpixels
-	//============================================================================
-        void DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels(
-        const unsigned int*                             ubuff,
-		const int					width,
-		const int					height,
-		int*&						klabels,
-		int&						numlabels,
-                const int&					K,//required number of superpixels
-                const double&                                   compactness);//10-20 is a good value for CIELAB space
-	//============================================================================
-	// Supervoxel segmentation for a given step size (supervoxel size ~= step*step*step)
-	//============================================================================
-	void DoSupervoxelSegmentation(
-		unsigned int**&		ubuffvec,
-		const int&					width,
-		const int&					height,
-		const int&					depth,
-		int**&						klabels,
-		int&						numlabels,
-                const int&					supervoxelsize,
-                const double&                                   compactness);
+	
+	vector<vector<double> >& getData();
+	
 	//============================================================================
 	// Save superpixel labels in a text file in raster scan order
 	//============================================================================
-	void SaveSuperpixelLabels(
+	void saveSuperpixelLabels(
 		const int*&					labels,
 		const int&					width,
 		const int&					height,
 		const string&				filename,
 		const string&				path);
-	//============================================================================
-	// Save supervoxel labels in a text file in raster scan, depth order
-	//============================================================================
-	void SaveSupervoxelLabels(
-		const int**&				labels,
-		const int&					width,
-		const int&					height,
-		const int&					depth,
-		const string&				filename,
-		const string&				path);
+
 	//============================================================================
 	// Function to draw boundaries around superpixels of a given 'color'.
 	// Can also be used to draw boundaries around supervoxels, i.e layer by layer.
 	//============================================================================
-	void DrawContoursAroundSegments(
+	void drawContoursAroundSegments(
 		unsigned int*&				segmentedImage,
 		int*&						labels,
 		const int&					width,
 		const int&					height,
 		const unsigned int&			color );
+	//============================================================================
+	//Load image (unsigned int*&) -> m_data(vector)
+	//============================================================================
+	void loadImage(
+		const unsigned int*	ubuff,
+		const int					width,
+		const int					height);
 
 private:
 	//============================================================================
 	// The main SLIC algorithm for generating superpixels
 	//============================================================================
-	void PerformSuperpixelSLIC(
+	void performSuperpixelSLIC(
 		vector< vector<double> >&				kseeds,
 		vector<vector<double> >&				kseedsxy,
 		int*&						klabels,
 		const int&					STEP,
-                const vector<double>&		edgemag,
+        const vector<double>&		edgemag,
 		const double&				m = 10.0);
 	//============================================================================
 	// The new SLIC algorithm for generating superpixels
 	//============================================================================
-	void PerformSuperpixelSLICnew(
+	void performSuperpixelSLICnew(
 		vector<double>&				kseedsl,
 		vector<double>&				kseedsa,
 		vector<double>&				kseedsb,
@@ -117,7 +84,7 @@ private:
 	//============================================================================
 	// Pick seeds for superpixels when step size of superpixels is given.
 	//============================================================================
-	void GetSeeds_ForGivenStepSize(
+	void getSeeds_ForGivenStepSize(
 		vector<vector<double> >&				kseeds,
 		vector<vector<double> >&				kseedsxy,
 		const int&					STEP,
@@ -128,14 +95,14 @@ private:
 	// Move the superpixel seeds to low gradient positions to avoid putting seeds
 	// at region boundaries.
 	//============================================================================
-	void PerturbSeeds(
+	void perturbSeeds(
 		vector<vector<double> >&				kseeds,
 		vector< vector<double> >&				kseedsxy,
 		const vector<double>&		edges);
 	//============================================================================
 	// Detect color edges, to help PerturbSeeds()
 	//============================================================================
-	void DetectLabEdges( vector<double>&				edges);
+	void detectLabEdges( vector<double>&				edges);
 	//============================================================================
 	// sRGB to XYZ conversion; helper for RGB2LAB()
 	//============================================================================
@@ -159,11 +126,11 @@ private:
 	//============================================================================
 	// sRGB to CIELAB conversion for 2-D images
 	//============================================================================
-	void DoRGBtoLABConversion(const unsigned int*&		ubuff);
+	void doRGBtoLABConversion(const unsigned int*&		ubuff);
 	//============================================================================
 	// Post-processing of SLIC segmentation, to avoid stray labels.
 	//============================================================================
-	void EnforceLabelConnectivity(
+	void enforceLabelConnectivity(
 		const int*					labels,
 		const int					width,
 		const int					height,
@@ -208,7 +175,7 @@ private:
 	double RGB2Gray(double red,double green,double blue);
 
 public:
-	void SLIC::DoSLIC(
+	void SLIC::doSLIC(
 		const unsigned int*			ubuff,
 		const int					width,
 		const int					height,
