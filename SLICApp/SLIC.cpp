@@ -27,6 +27,11 @@ SLIC::~SLIC()
 
 }
 
+vector<vector<double>>& SLIC::getData()
+{
+	return m_data;
+}
+
 //==============================================================================
 ///	RGB2XYZ
 ///
@@ -97,11 +102,11 @@ void SLIC::RGB2LAB(const int& sR, const int& sG, const int& sB, double& lval, do
 }
 
 //===========================================================================
-///	DoRGBtoLABConversion
+///	doRGBtoLABConversion
 ///
 ///	For whole image: overlaoded floating point version
 //===========================================================================
-void SLIC::DoRGBtoLABConversion(const unsigned int*& ubuff)
+void SLIC::doRGBtoLABConversion(const unsigned int*& ubuff)
 {
 	int sz = m_width*m_height;
 
@@ -112,20 +117,20 @@ void SLIC::DoRGBtoLABConversion(const unsigned int*& ubuff)
 		int b = (ubuff[j]      ) & 0xFF;
 		double l, a, bb;
 		RGB2LAB( r, g, b, l, a, bb);
-		m_data[j].push_back(l);
-		m_data[j].push_back(a);
-		m_data[j].push_back(bb);
+		m_data[j][0] = (l);
+		m_data[j][1] = (a);
+		m_data[j][2] = (bb);
 	}
 }
 
 
 //=================================================================================
-/// DrawContoursAroundSegments
+/// drawContoursAroundSegments
 ///
 /// Internal contour drawing option exists. One only needs to comment the if
 /// statement inside the loop that looks at neighbourhood.
 //=================================================================================
-void SLIC::DrawContoursAroundSegments(
+void SLIC::drawContoursAroundSegments(
 	unsigned int*&			ubuff,
 	int*&					labels,
 	const int&				width,
@@ -225,11 +230,35 @@ void SLIC::DrawContoursAroundSegments(
 	}
 }
 
+void SLIC::loadImage(const unsigned int * ubuff, const int width, const int height)
+{
+	m_width = width;
+	m_height = height;
+	int sz = m_width*m_height;
+	m_data.assign(sz, vector<double>(3));
+	if (1)//LAB, the default option
+	{
+		doRGBtoLABConversion(ubuff);
+	}
+	else//RGB
+	{
+		for (int i = 0; i < sz; i++)
+		{
+			int l = ubuff[i] >> 16 & 0xff;
+			int a = ubuff[i] >> 8 & 0xff;
+			int b = ubuff[i] & 0xff;
+			m_data[i][0] = (double(l));
+			m_data[i][1] = (double(a));
+			m_data[i][2] = (double(b));
+		}
+	}
+}
+
 
 //==============================================================================
 ///	DetectLabEdges
 //==============================================================================
-void SLIC::DetectLabEdges(vector<double>& edges)
+void SLIC::detectLabEdges(vector<double>& edges)
 {
 	int sz = m_width * m_height;
 
@@ -258,7 +287,7 @@ void SLIC::DetectLabEdges(vector<double>& edges)
 ///	PerturbSeeds
 //调整种子点到附近梯度最大的点上去
 //===========================================================================
-void SLIC::PerturbSeeds(
+void SLIC::perturbSeeds(
 	vector<vector<double> >&				kseeds,
 	vector< vector<double> >&				kseedsxy,
         const vector<double>&                   edges)
@@ -306,7 +335,7 @@ void SLIC::PerturbSeeds(
 ///
 /// The k seed values are taken as uniform spatial pixel samples.
 //===========================================================================
-void SLIC::GetSeeds_ForGivenStepSize(
+void SLIC::getSeeds_ForGivenStepSize(
 	vector<vector<double> >&				kseeds,
 	vector<vector<double> >&				kseedsxy,
     const int&					STEP,
@@ -317,8 +346,6 @@ void SLIC::GetSeeds_ForGivenStepSize(
 	int numseeds(0);
 	int n(0);
 
-	//int xstrips = m_width/STEP;
-	//int ystrips = m_height/STEP;
 	int xstrips = (int)(0.5+double(m_width)/double(STEP));
 	int ystrips = (int)(0.5+double(m_height)/double(STEP));
 
@@ -339,8 +366,11 @@ void SLIC::GetSeeds_ForGivenStepSize(
 	for( int y = 0; y < ystrips; y++ )
 	{
 		int ye = (int)(y*yerrperstrip);
+		
 		for( int x = 0; x < xstrips; x++ )
-		{
+		{	
+			kseeds[n] = vector<double>(m_depth);
+			kseedsxy[n] = vector<double>(2);
 			int xe = (int)(x*xerrperstrip);
             int seedx = (x*STEP+xoff+xe);
             if(hexgrid){ seedx = x*STEP+(xoff<<(y&0x1))+xe; seedx = min(m_width-1,seedx); }//for hex grid sampling
@@ -348,10 +378,10 @@ void SLIC::GetSeeds_ForGivenStepSize(
             int i = seedy*m_width + seedx;
 			
 			for (int j = 0; j < m_depth; j++) {
-				kseeds[n].push_back(m_data[i][j]);
+				kseeds[n][j] = (m_data[i][j]);
 			}
-			kseedsxy[n].push_back(seedx); 
-			kseedsxy[n].push_back(seedy);
+			kseedsxy[n][0] = (seedx); 
+			kseedsxy[n][1] = (seedy);
 			n++;
 		}
 	}
@@ -359,7 +389,7 @@ void SLIC::GetSeeds_ForGivenStepSize(
 	
 	if(perturbseeds)
 	{
-		PerturbSeeds(kseeds, kseedsxy, edgemag);
+		perturbSeeds(kseeds, kseedsxy, edgemag);
 	}
 }
 
@@ -370,7 +400,7 @@ void SLIC::GetSeeds_ForGivenStepSize(
 ///	Performs k mean segmentation. It is fast because it looks locally, not
 /// over the entire image.
 //===========================================================================
-void SLIC::PerformSuperpixelSLIC(
+void SLIC::performSuperpixelSLIC(
 	vector<vector<double> >&				kseeds,
 	vector<vector<double> >&				kseedsxy,
         int*&					klabels,
@@ -706,11 +736,11 @@ void SLIC::PerformSuperpixelSLIC(
 
 
 //===========================================================================
-///	SaveSuperpixelLabels
+///	saveSuperpixelLabels
 ///
 ///	Save labels in raster scan order.
 //===========================================================================
-void SLIC::SaveSuperpixelLabels(
+void SLIC::saveSuperpixelLabels(
 	const int*&					labels,
 	const int&					width,
 	const int&					height,
@@ -754,7 +784,7 @@ void SLIC::SaveSuperpixelLabels(
 ///		2. if a certain component is too small, assigning the previously found
 ///		    adjacent label to this component, and not incrementing the label.
 //===========================================================================
-void SLIC::EnforceLabelConnectivity(
+void SLIC::enforceLabelConnectivity(
 	const int*					labels,//input labels that need to be corrected to remove stray labels
 	const int					width,
 	const int					height,
@@ -853,42 +883,8 @@ void SLIC::EnforceLabelConnectivity(
 
 
 
-//===========================================================================
-///	DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels
-///
-/// The input parameter ubuff conains RGB values in a 32-bit unsigned integers
-/// as follows:
-///
-/// [1 1 1 1 1 1 1 1]  [1 1 1 1 1 1 1 1]  [1 1 1 1 1 1 1 1]  [1 1 1 1 1 1 1 1]
-///
-///        Nothing              R                 G                  B
-///
-/// The RGB values are accessed from (and packed into) the unsigned integers
-/// using bitwise operators as can be seen in the function DoRGBtoLABConversion().
-///
-/// compactness value depends on the input pixels values. For instance, if
-/// the input is greyscale with values ranging from 0-100, then a compactness
-/// value of 20.0 would give good results. A greater value will make the
-/// superpixels more compact while a smaller value would make them more uneven.
-///
-/// The labels can be saved if needed using SaveSuperpixelLabels()
-//===========================================================================
-void SLIC::DoSuperpixelSegmentation_ForGivenNumberOfSuperpixels(
-    const unsigned int*                             ubuff,
-	const int					width,
-	const int					height,
-	int*&						klabels,
-	int&						numlabels,
-	const int&					K,//required number of superpixels
-    const double&                                   compactness)//weight given to spatial distance
-{
-	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
-    //DoSLIC(ubuff,width,height,klabels,numlabels,superpixelsize,compactness);
-}
 
 
-
-///////////////////////////////yy's field//////////////////////////
 
 //===========================================================================
 // setModel
@@ -1316,9 +1312,9 @@ void SLIC::push_vec(
 	}
 }
 /*=================================================================*/
-//  main
+//  main function for all SLIC-superpixel calculation
 ////////////////////////////////////////////////////////////////////////
-void SLIC::DoSLIC(
+void SLIC::doSLIC(
 	const unsigned int*			ubuff,
 	const int					width,
 	const int					height,
@@ -1328,60 +1324,40 @@ void SLIC::DoSLIC(
 	const double&               compactness,
 	const vector<vector<double> >& exData)
 {
-	//------------------------------------------------
+	//calculate intital superpixels size through number of superpixels K
 	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
 	const int STEP = int(sqrt(double(superpixelsize)) + 0.5);
-	//------------------------------------------------
 
+	if (!m_data.size()) {
+		loadImage(ubuff, width, height);
+	}
 
-	//--------------------------------------------------
-	m_width = width;
-	m_height = height;
 	int sz = m_width*m_height;
-	m_data.assign(sz, vector<double>());
-	//klabels.resize( sz, -1 );
-	//--------------------------------------------------
 	for (int s = 0; s < sz; s++) klabels[s] = -1;
-	//--------------------------------------------------
-	if (1)//LAB, the default option
-	{
-		DoRGBtoLABConversion(ubuff);
-	}
-	else//RGB
-	{
-		for (int i = 0; i < sz; i++)
-		{
-			int l = ubuff[i] >> 16 & 0xff;
-			int a = ubuff[i] >> 8 & 0xff;
-			int b = ubuff[i] & 0xff;
-			m_data[i].push_back(double(l));
-			m_data[i].push_back(double(a));
-			m_data[i].push_back(double(b));
-		}
-	}
-	//--------------------------------------------------
-	bool perturbseeds(true);//perturb seeds is not absolutely necessary, one can set this flag to false,可以优化初始种子点
+	
+	//calculatee initial seeds
+	bool perturbSeeds(true);//perturb seeds is not absolutely necessary, one can set this flag to false,可以优化初始种子点
 	vector<double> edgemag(0);
-	if (perturbseeds) DetectLabEdges(edgemag);
+	if (perturbSeeds) detectLabEdges(edgemag);
 
 	vector<vector<double> > kseeds(0);
 	vector<vector<double> > kseedsxy(0);
-
 	m_depth = m_data[0].size(); //vector length();
+
+	//if there are more data want to add to m_data,
 	if (exData.size())
 		push_vec(exData);
-	GetSeeds_ForGivenStepSize(kseeds, kseedsxy, STEP, perturbseeds, edgemag);
+	getSeeds_ForGivenStepSize(kseeds, kseedsxy, STEP, perturbSeeds, edgemag);
+
 	if (0 && m_model)
 		//PerformSuperpixelSLICnew(kseedsl, kseedsa, kseedsb, kseedsx, kseedsy, klabels, STEP, edgemag, compactness);
 		return;
 	else
-		PerformSuperpixelSLIC(kseeds, kseedsxy, klabels, STEP, edgemag, compactness);
+		performSuperpixelSLIC(kseeds, kseedsxy, klabels, STEP, edgemag, compactness);
 	numlabels = kseeds.size();
 
-
-
 	int* nlabels = new int[sz];
-	EnforceLabelConnectivity(klabels, m_width, m_height, nlabels, numlabels, int(double(sz) / double(STEP*STEP)));
+	enforceLabelConnectivity(klabels, m_width, m_height, nlabels, numlabels, int(double(sz) / double(STEP*STEP)));
 	{for (int i = 0; i < sz; i++) klabels[i] = nlabels[i]; }
 	/*if (m_model)
 	{
@@ -1390,5 +1366,4 @@ void SLIC::DoSLIC(
 	{for (int i = 0; i < sz; i++) klabels[i] = nlabels[i]; }
 	}*/
 	if (nlabels) delete[] nlabels;
-
 }

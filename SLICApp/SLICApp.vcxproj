@@ -103,6 +103,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="functions.h" />
     <ClInclude Include="PictureHandler.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SLIC.h" />
@@ -112,6 +113,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="functions.cpp" />
     <ClCompile Include="PictureHandler.cpp" />
     <ClCompile Include="SLIC.cpp" />
     <ClCompile Include="SLICApp.cpp" />

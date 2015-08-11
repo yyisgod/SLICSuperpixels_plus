@@ -8,7 +8,8 @@
 #include "afxdialogex.h"
 #include "PictureHandler.h"
 #include "SLIC.h"
-
+#include "functions.h"
+using namespace yFunctions;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -190,10 +191,11 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		int numlabels(0);
 		SLIC slic;
 		slic.setModel(model);
-		vector<vector<double> > exData(sz, vector<double>(2,1.1));
-
-		slic.DoSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
-		slic.DrawContoursAroundSegments(img, labels, width, height, 0);
+		slic.loadImage(img, width, height);
+		vector<vector<double> > exData;
+		slicfeature(slic.getData(), height, width, exData);
+		slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
+		slic.drawContoursAroundSegments(img, labels, width, height, 0);
 		delete[] labels;
 
 		string addPath = "_C";//append outfilename
