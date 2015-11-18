@@ -38,7 +38,6 @@ private:
 
 	bool BrowseForFolder(string& folderpath);
 	void GetPictures(vector<string>& picvec);
-	void DoSupervoxelVideoSegmentation();
 public:
 	BOOL m_IsNew;
 	// 分类数目

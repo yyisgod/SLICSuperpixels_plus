@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "functions.h"
 
-void yFunctions::slicfeature(const vector<vector <double> >& g, int imgrow, int imgcol, vector<vector<double> >& localfeature)
+void yFunctions::slicFeatureNeighborGray(const vector<vector <double> >& g, int imgrow, int imgcol, vector<vector<double> >& localfeature)
 {
 	int N = 3;
 	localfeature.assign(imgrow*imgcol, vector<double>(N*N, 0));

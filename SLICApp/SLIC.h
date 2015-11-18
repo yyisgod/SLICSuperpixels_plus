@@ -5,20 +5,23 @@
 // Radhakrishna Achanta, Appu Shaji, Kevin Smith, Aurelien Lucchi, Pascal Fua, and Sabine Susstrunk,
 // "SLIC Superpixels",
 // EPFL Technical Report no. 149300, June 2010.
+//
+// Yy added a improvement and reconfiguration the code at 2015.
 //===========================================================================
 //	Copyright (c) 2012 Radhakrishna Achanta [EPFL]. All rights reserved.
 //===========================================================================
 //////////////////////////////////////////////////////////////////////
 
-#if !defined(_SLIC_H_INCLUDED_)
-#define _SLIC_H_INCLUDED_
-
+#ifndef _SLIC_H
+#define _SLIC_H
 
 #include <vector>
 #include <string>
 #include <algorithm>
+
+#define D_VAR 15.7 //const for judge bad region.
+#define __DEBUG__ 0
 using namespace std;
-#define D_VAR 15.7
 
 class SLIC  
 {
@@ -26,6 +29,9 @@ public:
 	SLIC();
 	virtual ~SLIC();
 	
+	//============================================================================
+	// return m_data
+	//============================================================================
 	vector<vector<double> >& getData();
 	
 	//============================================================================
@@ -61,24 +67,22 @@ private:
 	// The main SLIC algorithm for generating superpixels
 	//============================================================================
 	void performSuperpixelSLIC(
-		vector< vector<double> >&				kseeds,
-		vector<vector<double> >&				kseedsxy,
+		vector< vector<double> >&	kseeds,
+		vector<vector<double> >&	kseedsxy,
 		int*&						klabels,
 		const int&					STEP,
         const vector<double>&		edgemag,
 		const double&				m = 10.0);
-	//============================================================================
-	// The new SLIC algorithm for generating superpixels
-	//============================================================================
-	void performSuperpixelSLICnew(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
-		int*&						klabels,
+	//================================================================================
+	// ¥¶¿ÌµÙªµ«¯”Ú
+	//================================================================================
+	void reCutBadRegion(
+		vector<vector<double> >&	kseeds,
+		vector<vector<double> >&	kseedsxy,
+		int*						klabels,
+		int							numlabels,
 		const int&					STEP,
-                const vector<double>&		edgemag,
+		const vector<double>&		edgemag,
 		const double&				m = 10.0);
 	
 	//============================================================================
@@ -102,31 +106,8 @@ private:
 	//============================================================================
 	// Detect color edges, to help PerturbSeeds()
 	//============================================================================
-	void detectLabEdges( vector<double>&				edges);
-	//============================================================================
-	// sRGB to XYZ conversion; helper for RGB2LAB()
-	//============================================================================
-	void RGB2XYZ(
-		const int&					sR,
-		const int&					sG,
-		const int&					sB,
-		double&						X,
-		double&						Y,
-		double&						Z);
-	//============================================================================
-	// sRGB to CIELAB conversion (uses RGB2XYZ function)
-	//============================================================================
-	void RGB2LAB(
-		const int&					sR,
-		const int&					sG,
-		const int&					sB,
-		double&						lval,
-		double&						aval,
-		double&						bval);
-	//============================================================================
-	// sRGB to CIELAB conversion for 2-D images
-	//============================================================================
-	void doRGBtoLABConversion(const unsigned int*&		ubuff);
+	void detectEdges( vector<double>&edges);
+
 	//============================================================================
 	// Post-processing of SLIC segmentation, to avoid stray labels.
 	//============================================================================
@@ -134,9 +115,11 @@ private:
 		const int*					labels,
 		const int					width,
 		const int					height,
-		int*&						nlabels,//input labels that need to be corrected to remove stray labels
+		int*						nlabels,//input labels that need to be corrected to remove stray labels
 		int&						numlabels,//the number of labels changes in the end if segments are removed
 		const int&					K); //the number of superpixels desired by the user
+
+	void enforceLabelConnectivityNew(const int * labels, const int width, const int height, int * nlabels, int & numlabels, const int & K);
 
 	//============================================================================
 	// push more vector back the m_data;
@@ -144,37 +127,28 @@ private:
 	void push_vec(
 		const vector<vector<double> >&	data
 		);
-	//================================================================================
-	// This field is used by yy self
-	//================================================================================
-public:
-	void setModel(int model);
-	void reCutBadRegion(
-		vector<double>&				kseedsl,
-		vector<double>&				kseedsa,
-		vector<double>&				kseedsb,
-		vector<double>&				kseedsx,
-		vector<double>&				kseedsy,
-		int*&						klabels,
-		int							numlabels,
-		const int&					STEP,
-        const vector<double>&		edgemag,
-		const double&				m = 10.0);
-	
+
+	//============================================================================
+	// through RGB calculate Gray Level;
+	//============================================================================
+	double RGB2Gray(double red, double green, double blue);
+
+	//============================================================================
+	// out seeds data for debug
+	//============================================================================
 	void outSeeds(
 		int							n,
-		vector<vector<double> >&				kseedsl,
-		vector<vector<double> >&				kseedsxy);
-
-private:
-	//===================
-	//calculate the average of vector l a b
-	//return vector [l a b]
-	//===========================================
-	vector<double> calAverage(int index);
-	double RGB2Gray(double red,double green,double blue);
-
+		vector<vector<double> >&	kseedsl,
+		vector<vector<double> >&	kseedsxy);
 public:
+	//============================================================================
+	// set m_model for select old/new method.
+	//============================================================================
+	void setModel(int model);
+
+	//============================================================================
+	// the entry for SLIC alogrithm
+	//============================================================================
 	void SLIC::doSLIC(
 		const unsigned int*			ubuff,
 		const int					width,
@@ -190,9 +164,8 @@ private:
 	int										m_height;
 	int										m_depth;
 
-	vector<vector<double> >					m_data;
+	vector<vector<double> >					m_data;		//perserve image data, one line for one pixel's feature vector
 
-	int										m_model;   ///use for control the model(such as new method or old method , 0 = old, 1 = new
+	int										m_model;   //use for control the model(such as new method or old method , 0 = old, 1 = new
 };
-
-#endif // !defined(_SLIC_H_INCLUDED_)
+#endif 

@@ -165,7 +165,7 @@ HCURSOR CSLICAppDlg::OnQueryDragIcon()
 
 void CSLICAppDlg::OnBnClickedButtonOpen()
 {
-	_CrtSetBreakAlloc(489);
+	UpdateData(true);
 	PictureHandler picHand;
 	vector<string> picvec(0);
 	picvec.resize(0);
@@ -187,14 +187,19 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		if (m_nums < 20 || m_nums > sz / 4) m_nums = sz / 200;//i.e the default size of the superpixel is 200 pixels
 		if (m_m < 1.0 || m_m > 80.0) m_m = 20.0;
 		//---------------------------------------------------------
+
 		int* labels = new int[sz];
 		int numlabels(0);
+
 		SLIC slic;
 		slic.setModel(model);
+
 		slic.loadImage(img, width, height);
+
 		vector<vector<double> > exData;
-		slicfeature(slic.getData(), height, width, exData);
+		//slicFeatureNeighborGray(slic.getData(), height, width, exData); //º∆À„Ãÿ’˜
 		slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
+		
 		slic.drawContoursAroundSegments(img, labels, width, height, 0);
 		delete[] labels;
 
