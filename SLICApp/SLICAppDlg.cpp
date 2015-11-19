@@ -192,7 +192,6 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		m_m *= 1.717;
 		m_std *= 1.717;
 	}
-
 	for (int k = 0; k < numPics; k++)
 	{
 		UINT* img = NULL;

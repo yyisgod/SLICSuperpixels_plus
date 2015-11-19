@@ -4,6 +4,7 @@
 // All rights reserved
 // Email: firstname.lastname@epfl.ch
 //////////////////////////////////////////////////////////////////////
+
 #include "stdafx.h"
 #include <cfloat>
 #include <cmath>
@@ -11,7 +12,6 @@
 #include <fstream>
 #include "SLIC.h"
 #include <sstream>
-
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -102,9 +102,9 @@ void SLIC::doRGBtoLABConversion(const unsigned int*& ubuff) {
 	int sz = m_width*m_height;
 
 	for (int j = 0; j < sz; j++) {
-		int b = (ubuff[j] >> 16) & 0xFF;
+		int r = (ubuff[j] >> 16) & 0xFF;
 		int g = (ubuff[j] >> 8) & 0xFF;
-		int r = (ubuff[j]) & 0xFF;
+		int b = (ubuff[j]) & 0xFF;
 		double l, a, bb;
 		RGB2LAB(r, g, b, l, a, bb);
 		m_data[j][0] = (l);
@@ -172,19 +172,19 @@ void SLIC::loadImage(const unsigned int * ubuff, const int width, const int heig
 		break;
 	case 1://RGB
 		for (int i = 0; i < sz; i++) {
-			int b = ubuff[i] >> 16 & 0xff;
+			int r = ubuff[i] >> 16 & 0xff;
 			int g = ubuff[i] >> 8 & 0xff;
-			int r = ubuff[i] & 0xff;
-			m_data[i][0] = (double(b));
+			int b = ubuff[i] & 0xff;
+			m_data[i][0] = (double(r));
 			m_data[i][1] = (double(g));
-			m_data[i][2] = (double(r));
+			m_data[i][2] = (double(b));
 		}
 		break;
 	case 2://want gray
 		for (int i = 0; i < sz; i++) {
-			int b = ubuff[i] >> 16 & 0xff;
+			int r = ubuff[i] >> 16 & 0xff;
 			int g = ubuff[i] >> 8 & 0xff;
-			int r = ubuff[i] & 0xff;
+			int b = ubuff[i] & 0xff;
 			m_data[i][0] = (RGB2Gray(r,g,b));
 		}
 	case 3://input Gray
@@ -206,14 +206,13 @@ void SLIC::detectEdges(vector<double>& edges) {
 		for (int k = 1; k < m_width - 1; k++) {
 			int i = j * m_width + k;
 
-			double dx = (m_data[i - 1][0] - m_data[i + 1][0])*(m_data[i - 1][0] - m_data[i + 1][0]) +
-				(m_data[i - 1][1] - m_data[i + 1][1])*(m_data[i - 1][1] - m_data[i + 1][1]) +
-				(m_data[i - 1][2] - m_data[i + 1][2])*(m_data[i - 1][2] - m_data[i + 1][2]);
+			double dx = 0;
+			double dy = 0;
+			for (int t = 0; t < m_depth; t++) {
+				dx += (m_data[i - 1][t] - m_data[i + 1][t])*(m_data[i - 1][t] - m_data[i + 1][t]);
 
-			double dy = (m_data[i - m_width][0] - m_data[i + m_width][0])*(m_data[i - m_width][0] - m_data[i + m_width][0]) +
-				(m_data[i - m_width][1] - m_data[i + m_width][1])*(m_data[i - m_width][1] - m_data[i + m_width][1]) +
-				(m_data[i - m_width][2] - m_data[i + m_width][2])*(m_data[i - m_width][2] - m_data[i + m_width][2]);
-
+				dy += (m_data[i - m_width][t] - m_data[i + m_width][t])*(m_data[i - m_width][t] - m_data[i + m_width][t]);
+			}
 			//edges[i] = fabs(dx) + fabs(dy);
 			edges[i] = dx*dx + dy*dy;
 		}
@@ -535,8 +534,8 @@ void SLIC::reCutBadRegion(
 					}
 					break;
 				case 1:
-					if (RGB2Gray(m_data[ind][2], m_data[ind][1], m_data[ind][0])
-						< RGB2Gray(mean[klabels[ind]][2], mean[klabels[ind]][1], mean[klabels[ind]][0])) {
+					if (RGB2Gray(m_data[ind][0], m_data[ind][1], m_data[ind][2])
+						< RGB2Gray(mean[klabels[ind]][0], mean[klabels[ind]][1], mean[klabels[ind]][2])) {
 						//灰度小的一半
 						for (int i = 0; i < m_depth; i++)
 							sigmaLow[klabels[ind]][i] += m_data[ind][i];
@@ -621,7 +620,7 @@ void SLIC::reCutBadRegion(
 
 	distvec.assign(sz, DBL_MAX);
 	for (int n = 0; n < numk; n++) {
-		//if (labelC[n] == -1)//加种子后筛选需要充分的区域
+		if (labelC[n] == -1)//加种子后筛选需要充分的区域
 			continue;
 		y1 = static_cast<int>(max(0.0, kseedsxy[n][1] - offset));
 		y2 = static_cast<int>(min((double)m_height, kseedsxy[n][1] + offset));
@@ -632,7 +631,7 @@ void SLIC::reCutBadRegion(
 		for (int y = y1; y < y2; y++) {
 			for (int x = x1; x < x2; x++) {
 				int i = y*m_width + x;
-				//if (labelC[n] != klabels[i]) continue;   //如果不是该区域的点，则抛弃
+				if (labelC[n] != klabels[i]) continue;   //如果不是该区域的点，则抛弃
 
 				dist = 0;
 				for (int j = 0; j < m_depth; j++) {
@@ -654,228 +653,6 @@ void SLIC::reCutBadRegion(
 		}
 	}
 }
-
-//===========================================================================
-///	PerformSuperpixelSLICnew
-/// 新版本
-///	Performs k mean segmentation. It is fast because it looks locally, not
-/// over the entire image.
-//===========================================================================
-//void SLIC::PerformSuperpixelSLICnew(
-//	vector<double>&				kseedsl,
-//	vector<double>&				kseedsa,
-//	vector<double>&				kseedsb,
-//	vector<double>&				kseedsx,
-//	vector<double>&				kseedsy,
-//        int*&					klabels,
-//        const int&				STEP,
-//        const vector<double>&                   edgemag,
-//	const double&				M)
-//{
-//	int sz = m_width*m_height;
-//	int numk = kseedsl.size();
-//	//----------------
-//	int offset = STEP;
-//        //if(STEP < 8) offset = STEP*1.5;//to prevent a crash due to a very small step size
-//	//----------------
-//	
-//	
-//	vector<double> distvec(sz, DBL_MAX);
-//	vector<int> labelC(numk,-1);
-//
-//	double invwt = 1.0/((STEP/M)*(STEP/M));
-//
-//	//
-//
-//	int x1, y1, x2, y2;
-//	double l, a, b;
-//	double dist;
-//	double distxy;
-//	bool flag = 0;//标志是否需要加种子
-//	for( int itr = 0; itr < 11; itr++ )
-//	{	
-//		distvec.assign(sz, DBL_MAX);
-//		for( int n = 0; n < numk; n++ )
-//		{
-//			if(flag && (labelC[n] == -1))//加种子后筛选需要充分的区域
-//				continue;
-//            y1 = max(0.0,			kseedsy[n]-offset);
-//            y2 = min((double)m_height,	kseedsy[n]+offset);
-//            x1 = max(0.0,			kseedsx[n]-offset);
-//            x2 = min((double)m_width,	kseedsx[n]+offset);
-//
-//
-//			for( int y = y1; y < y2; y++ )
-//			{
-//				for( int x = x1; x < x2; x++ )
-//				{
-//					int i = y*m_width + x;
-//					if(flag &&(labelC[n] != klabels[i])) continue;   //如果不是该区域的点，则抛弃
-//
-//					l = m_lvec[i];
-//					a = m_avec[i];
-//					b = m_bvec[i];
-//
-//					dist =			(l - kseedsl[n])*(l - kseedsl[n]) +
-//									(a - kseedsa[n])*(a - kseedsa[n]) +
-//									(b - kseedsb[n])*(b - kseedsb[n]);
-//
-//					distxy =		(x - kseedsx[n])*(x - kseedsx[n]) +
-//									(y - kseedsy[n])*(y - kseedsy[n]);
-//					
-//					//------------------------------------------------------------------------
-//					dist += distxy*invwt;//dist = sqrt(dist) + sqrt(distxy*invwt);//this is more exact
-//					//------------------------------------------------------------------------
-//					if( dist < distvec[i] )
-//					{
-//						distvec[i] = dist;
-//						klabels[i]  = n;
-//					}
-//					
-//				}
-//			}
-//		}
-//		//-----------------------------------------------------------------
-//		// Recalculate the centroid and store in the seed values
-//		//-----------------------------------------------------------------
-//		//instead of reassigning memory on each iteration, just reset.
-//	
-//		if(itr == 9 )
-//				flag = 1;
-//		vector<double> clustersize(numk, 0);
-//		
-//
-//		vector<double> sigmal(numk, 0);
-//		vector<double> sigmaa(numk, 0);
-//		vector<double> sigmab(numk, 0);
-//		vector<double> sigmax(numk, 0);
-//		vector<double> sigmay(numk, 0);
-//		sigmal.assign(numk, 0);
-//		sigmaa.assign(numk, 0);
-//		sigmab.assign(numk, 0);
-//		sigmax.assign(numk, 0);
-//		sigmay.assign(numk, 0);
-//		clustersize.assign(numk, 0);
-//
-//		//新东西
-//		//something new
-//		vector<double> meanl(numk,0);
-//		vector<double> meana(numk,0);
-//		vector<double> meanb(numk,0);
-//		vector<double> stddist(numk,0);
-//		vector<double> edgemax(numk, 0);
-//		vector<double> edgemin(numk,0);
-//		edgemax.assign(numk,0);//最大梯度
-//		edgemin.assign(numk,DBL_MAX);//最小梯度
-//		vector<int> emaxlabel(numk, 0);//对应像素
-//		vector<int> eminlabel(numk,0);
-//		emaxlabel.assign(numk,-1);
-//		eminlabel.assign(numk,-1);
-//		//------------------------------------
-//		//edgesum.assign(numk, 0);
-//		//------------------------------------
-//
-//		{int ind(0);
-//		for( int r = 0; r < m_height; r++ )
-//		{
-//			for( int c = 0; c < m_width; c++ )
-//			{
-//				sigmal[klabels[ind]] += m_lvec[ind];
-//				sigmaa[klabels[ind]] += m_avec[ind];
-//				sigmab[klabels[ind]] += m_bvec[ind];
-//				sigmax[klabels[ind]] += c;
-//				sigmay[klabels[ind]] += r;
-//
-//				//------------------------------------
-//				//edgesum[klabels[ind]] += edgemag[ind];
-//				//------------------------------------
-//				clustersize[klabels[ind]] += 1.0;
-//				
-//				if(edgemax[klabels[ind]] < edgemag[ind])
-//				{
-//					edgemax[klabels[ind]] = edgemag[ind];//该种子点类的最大梯度
-//					emaxlabel[klabels[ind]] = ind;
-//				}
-//				if(edgemin[klabels[ind]] > edgemag[ind])
-//				{
-//					edgemin[klabels[ind]] = edgemag[ind];
-//					eminlabel[klabels[ind]] = ind;
-//				}
-//				ind++;
-//			}
-//		}}
-//		//出均值
-//		vector<double> inv(numk, 0);//to store 1/clustersize[k] values
-//		meanl.assign(numk,0);
-//		meana.assign(numk,0);
-//		meanb.assign(numk,0);
-//		
-//		{for( int k = 0; k < numk; k++ )
-//		{
-//			if( clustersize[k] <= 0 ) clustersize[k] = 1;
-//			inv[k] = 1.0/double(clustersize[k]);//computing inverse now to multiply, than divide later 
-//			meanl[k] = sigmal[k]*inv[k];
-//			meana[k] = sigmaa[k]*inv[k];
-//			meanb[k] = sigmab[k]*inv[k];
-//
-//		}}
-//		
-//		//出方差
-//		stddist.assign(numk,0);
-//		if(flag)
-//		{int ind(0);
-//		for( int r = 0; r < m_height; r++ )
-//		{
-//			for( int c = 0; c < m_width; c++ )
-//			{
-//				stddist[klabels[ind]] += (m_lvec[ind] - meanl[klabels[ind]])*(m_lvec[ind] - meanl[klabels[ind]])
-//										+(m_avec[ind] - meana[klabels[ind]])*(m_avec[ind] - meana[klabels[ind]])
-//										+(m_bvec[ind] - meanb[klabels[ind]])*(m_bvec[ind] - meanb[klabels[ind]]);
-//				ind++;
-//			}
-//		}
-//		for( int k = 0; k < numk; k++ )
-//		{
-//			stddist[k] = sqrt(stddist[k] * inv[k] /3);//因为点数为3倍
-//
-//		}
-//		}
-//
-//	
-//		int new_numk = numk;//新的种子数
-//		{for( int k = 0; k < numk; k++ )
-//		{
-//			if((stddist[k] < 3)|| !flag)//不需要再分割
-//			{
-//				kseedsl[k] = meanl[k];
-//				kseedsa[k] = meana[k];
-//				kseedsb[k] = meanb[k];
-//				kseedsx[k] = sigmax[k]*inv[k];
-//				kseedsy[k] = sigmay[k]*inv[k];
-//				//------------------------------------
-//				//edgesum[k] *= inv[k];
-//				//------------------------------------
-//			}else
-//			{
-//				new_numk++;
-//				kseedsl[k] = m_lvec[eminlabel[k]];
-//				kseedsa[k] = m_avec[eminlabel[k]];
-//				kseedsb[k] = m_bvec[eminlabel[k]];
-//				kseedsx[k] = eminlabel[k] % m_width;
-//				kseedsy[k] = eminlabel[k] / m_width;
-//				kseedsl.push_back(m_lvec[emaxlabel[k]]);
-//				kseedsa.push_back(m_avec[emaxlabel[k]]);
-//				kseedsb.push_back(m_bvec[emaxlabel[k]]);
-//				kseedsx.push_back(emaxlabel[k] % m_width);
-//				kseedsy.push_back(emaxlabel[k] / m_width);
-//				labelC[k] = k;
-//				labelC.push_back(k);
-//			}
-//		}}
-//		numk = new_numk;
-//	}
-//}
-
 
 
 //===========================================================================
@@ -1275,10 +1052,10 @@ void SLIC::doSLIC(
 	numlabels = kseeds.size();
 	int* nlabels = new int[sz];
 	if (m_model) {
-		enforceLabelConnectivityNew(klabels, m_width, m_height, nlabels, numlabels, int(double(sz) / double(STEP*STEP)));
+		enforceLabelConnectivity(klabels, m_width, m_height, nlabels, numlabels, int(double(sz) / double(STEP*STEP)));
 		{for (int i = 0; i < sz; i++) klabels[i] = nlabels[i]; }
 		reCutBadRegion(kseeds, kseedsxy, klabels,numlabels, STEP, edgemag, compactness);
-		enforceLabelConnectivityNew(klabels, m_width, m_height, nlabels, numlabels, static_cast<int>(double(sz) / double(STEP*STEP)));
+		enforceLabelConnectivity(klabels, m_width, m_height, nlabels, numlabels, static_cast<int>(double(sz) / double(STEP*STEP)));
 		{for (int i = 0; i < sz; i++) klabels[i] = nlabels[i]; }
 	}
 	else {

@@ -186,7 +186,7 @@ void PictureHandler::GetPictureBuffer(
 	bmp->LockBits(
 		&rect,
 		ImageLockModeWrite,
-		PixelFormat32bppARGB,
+		PixelFormat32bppARGB,//alpha,Red,Green,Blue
 		bmpData);
 
 	_ASSERT( bmpData->Stride/4 == width );
@@ -198,6 +198,8 @@ void PictureHandler::GetPictureBuffer(
 	for( int p = 0; p < imgSize; p++ ) imgBuffer[p] = tempBuff[p];
 
 	bmp->UnlockBits(bmpData);
+	delete bmpData;
+	delete bmp;
 }
 
 
@@ -288,6 +290,8 @@ void PictureHandler::GetPictureBuffer(
 	memcpy( imgBuffer, (UINT*)bmpData->Scan0, imgSize*sizeof(UINT) );
 
 	bmp->UnlockBits(bmpData);
+	delete bmpData;
+	delete bmp;
 }
 
 
