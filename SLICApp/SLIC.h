@@ -19,7 +19,6 @@
 #include <string>
 #include <algorithm>
 
-#define D_VAR 15.7 //const for judge bad region.
 #define __DEBUG__ 0
 using namespace std;
 
@@ -103,6 +102,23 @@ private:
 		vector<vector<double> >&				kseeds,
 		vector< vector<double> >&				kseedsxy,
 		const vector<double>&		edges);
+
+	void RGB2XYZ(const int & sR, const int & sG, const int & sB, double & X, double & Y, double & Z);
+
+	//============================================================================
+	// sRGB to CIELAB conversion (uses RGB2XYZ function)
+	//============================================================================
+	void RGB2LAB(
+		const int&					sR,
+		const int&					sG,
+		const int&					sB,
+		double&						lval,
+		double&						aval,
+		double&						bval);
+	//============================================================================
+	// sRGB to CIELAB conversion for 2-D images
+	//============================================================================
+	void doRGBtoLABConversion(const unsigned int*&		ubuff);
 	//============================================================================
 	// Detect color edges, to help PerturbSeeds()
 	//============================================================================
@@ -144,7 +160,7 @@ public:
 	//============================================================================
 	// set m_model for select old/new method.
 	//============================================================================
-	void setModel(int model);
+	void setModel(int model, double std = 0);
 
 	//============================================================================
 	// the entry for SLIC alogrithm
@@ -166,6 +182,11 @@ private:
 
 	vector<vector<double> >					m_data;		//perserve image data, one line for one pixel's feature vector
 
-	int										m_model;   //use for control the model(such as new method or old method , 0 = old, 1 = new
+	//use for control the model(such as new method or old method 
+	//3bit: ABC, A = 0/1:old/new method. BC = 00(Lab),01(RGB),10(input 24bit,want Gray),11(Gray)
+	int										m_model;
+
+	double									D_VAR;	//use for judge bad region
+													
 };
 #endif 

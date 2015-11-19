@@ -56,8 +56,9 @@ CSLICAppDlg::CSLICAppDlg(CWnd* pParent /*=NULL*/)
 	, m_IsNew(FALSE)
 	, m_nums(100)
 	, m_m(10)
-{
+	, m_colorMode(0), m_std(5.7) {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+
 }
 
 void CSLICAppDlg::DoDataExchange(CDataExchange* pDX)
@@ -66,6 +67,11 @@ void CSLICAppDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_CHECK_NEW, m_IsNew);
 	DDX_Text(pDX, IDC_EDIT_NUM, m_nums);
 	DDX_Text(pDX, IDC_EDIT_M, m_m);
+	DDX_Control(pDX, IDC_COMBO_COLOR, m_ComboColor);
+	DDX_CBIndex(pDX, IDC_COMBO_COLOR, m_colorMode);
+	DDV_MinMaxInt(pDX, m_colorMode, 0, 3);
+	DDX_Text(pDX, IDC_EDIT_STD, m_std);
+	DDV_MinMaxDouble(pDX, m_std, 0, 100);
 }
 
 BEGIN_MESSAGE_MAP(CSLICAppDlg, CDialogEx)
@@ -108,6 +114,12 @@ BOOL CSLICAppDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO:  在此添加额外的初始化代码
+
+	m_ComboColor.AddString(_T("LAB"));
+	m_ComboColor.AddString(_T("RGB"));
+	m_ComboColor.AddString(_T("RGB2GRAY"));
+	m_ComboColor.AddString(_T("GRAY"));
+	m_ComboColor.SetCurSel(0);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -174,7 +186,13 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 	BrowseForFolder(saveLocation);
 
 	int numPics(picvec.size());
-	int model = m_IsNew ? 1 : 0;
+	int model = (m_IsNew << 2) + m_colorMode;
+	if (m_m < 1.0 || m_m > 80.0) m_m = 20.0;
+	if (m_colorMode == 1) { // deal with the more color(RGB)
+		m_m *= 1.717;
+		m_std *= 1.717;
+	}
+
 	for (int k = 0; k < numPics; k++)
 	{
 		UINT* img = NULL;
@@ -183,16 +201,13 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 
 		picHand.GetPictureBuffer(picvec[k], img, width, height);
 		int sz = width*height;
-		//---------------------------------------------------------
 		if (m_nums < 20 || m_nums > sz / 4) m_nums = sz / 200;//i.e the default size of the superpixel is 200 pixels
-		if (m_m < 1.0 || m_m > 80.0) m_m = 20.0;
-		//---------------------------------------------------------
 
 		int* labels = new int[sz];
 		int numlabels(0);
 
 		SLIC slic;
-		slic.setModel(model);
+		slic.setModel(model,m_std);
 
 		slic.loadImage(img, width, height);
 
@@ -294,3 +309,8 @@ bool CSLICAppDlg::BrowseForFolder(string& folderpath)
 	folderpath.append("\\");
 	return true;
 }
+
+
+//void CSLICAppDlg::OnCbnSelchangeComboColor() {
+//	// TODO: 在此添加控件通知处理程序代码
+//}

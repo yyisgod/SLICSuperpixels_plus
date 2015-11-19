@@ -3,6 +3,7 @@
 //
 #include <vector>
 #include <string>
+#include "afxwin.h"
 using namespace std;
 #pragma once
 
@@ -44,4 +45,8 @@ public:
 	int m_nums;
 	// M²ÎÊý
 	double m_m;
+//	afx_msg void OnCbnSelchangeComboColor();
+	CComboBox m_ComboColor;
+	int m_colorMode;
+	double m_std;
 };

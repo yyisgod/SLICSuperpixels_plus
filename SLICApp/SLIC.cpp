@@ -17,7 +17,7 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-SLIC::SLIC():m_depth(3) {
+SLIC::SLIC():m_depth(3),m_model(0) {
 }
 
 SLIC::~SLIC() {
@@ -27,7 +27,91 @@ SLIC::~SLIC() {
 vector<vector<double>>& SLIC::getData() {
 	return m_data;
 }
+//== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==
+///	RGB2XYZ
+///
+/// sRGB (D65 illuninant assumption) to XYZ conversion
+//==============================================================================
+void SLIC::RGB2XYZ(
+	const int&		sR,
+	const int&		sG,
+	const int&		sB,
+	double&			X,
+	double&			Y,
+	double&			Z) {
+	double R = sR / 255.0;
+	double G = sG / 255.0;
+	double B = sB / 255.0;
 
+	double r, g, b;
+
+	if (R <= 0.04045)	r = R / 12.92;
+	else				r = pow((R + 0.055) / 1.055, 2.4);
+	if (G <= 0.04045)	g = G / 12.92;
+	else				g = pow((G + 0.055) / 1.055, 2.4);
+	if (B <= 0.04045)	b = B / 12.92;
+	else				b = pow((B + 0.055) / 1.055, 2.4);
+
+	X = r*0.4124564 + g*0.3575761 + b*0.1804375;
+	Y = r*0.2126729 + g*0.7151522 + b*0.0721750;
+	Z = r*0.0193339 + g*0.1191920 + b*0.9503041;
+}
+//===========================================================================
+///	RGB2LAB
+//===========================================================================
+void SLIC::RGB2LAB(const int& sR, const int& sG, const int& sB, double& lval, double& aval, double& bval) {
+	//------------------------
+	// sRGB to XYZ conversion
+	//------------------------
+	double X, Y, Z;
+	RGB2XYZ(sR, sG, sB, X, Y, Z);
+
+	//------------------------
+	// XYZ to LAB conversion
+	//------------------------
+	double epsilon = 0.008856;	//actual CIE standard
+	double kappa = 903.3;		//actual CIE standard
+
+	double Xr = 0.950456;	//reference white
+	double Yr = 1.0;		//reference white
+	double Zr = 1.088754;	//reference white
+
+	double xr = X / Xr;
+	double yr = Y / Yr;
+	double zr = Z / Zr;
+
+	double fx, fy, fz;
+	if (xr > epsilon)	fx = pow(xr, 1.0 / 3.0);
+	else				fx = (kappa*xr + 16.0) / 116.0;
+	if (yr > epsilon)	fy = pow(yr, 1.0 / 3.0);
+	else				fy = (kappa*yr + 16.0) / 116.0;
+	if (zr > epsilon)	fz = pow(zr, 1.0 / 3.0);
+	else				fz = (kappa*zr + 16.0) / 116.0;
+
+	lval = 116.0*fy - 16.0;
+	aval = 500.0*(fx - fy);
+	bval = 200.0*(fy - fz);
+}
+
+//===========================================================================
+///	doRGBtoLABConversion
+///
+///	For whole image: overlaoded floating point version
+//===========================================================================
+void SLIC::doRGBtoLABConversion(const unsigned int*& ubuff) {
+	int sz = m_width*m_height;
+
+	for (int j = 0; j < sz; j++) {
+		int b = (ubuff[j] >> 16) & 0xFF;
+		int g = (ubuff[j] >> 8) & 0xFF;
+		int r = (ubuff[j]) & 0xFF;
+		double l, a, bb;
+		RGB2LAB(r, g, b, l, a, bb);
+		m_data[j][0] = (l);
+		m_data[j][1] = (a);
+		m_data[j][2] = (bb);
+	}
+}
 //=================================================================================
 /// drawContoursAroundSegments
 ///
@@ -57,10 +141,7 @@ void SLIC::drawContoursAroundSegments(
 				if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
 					int index = y*width + x;
 
-					//if( false == istaken[index] )//comment this to obtain internal contours
-					{
-						if (labels[mainindex] != labels[index]) np++;
-					}
+				if (labels[mainindex] != labels[index]) np++;
 				}
 			}
 			if (np > 1) {
@@ -77,15 +158,6 @@ void SLIC::drawContoursAroundSegments(
 	for (int j = 0; j < numboundpix; j++) {
 		int ii = contoury[j] * width + contourx[j];
 		ubuff[ii] = 0xffffff;
-
-		for (int n = 0; n < 8; n++) {
-			int x = contourx[j] + dx8[n];
-			int y = contoury[j] + dy8[n];
-			if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
-				int ind = y*width + x;
-				if (!istaken[ind]) ubuff[ind] = 0;
-			}
-		}
 	}
 }
 
@@ -93,15 +165,32 @@ void SLIC::loadImage(const unsigned int * ubuff, const int width, const int heig
 	m_width = width;
 	m_height = height;
 	int sz = m_width*m_height;
-	m_data.assign(sz, vector<double>(3));
-	
-	for (int i = 0; i < sz; i++) {
-		int b = ubuff[i] >> 16 & 0xff;
-		int g = ubuff[i] >> 8 & 0xff;
-		int r = ubuff[i] & 0xff;
-		m_data[i][0] = (double(b));
-		m_data[i][1] = (double(g));
-		m_data[i][2] = (double(r));
+	m_data.assign(sz, vector<double>(m_depth));
+	switch(m_model & 3) {
+	case 0://LAB, the default option
+		doRGBtoLABConversion(ubuff);
+		break;
+	case 1://RGB
+		for (int i = 0; i < sz; i++) {
+			int b = ubuff[i] >> 16 & 0xff;
+			int g = ubuff[i] >> 8 & 0xff;
+			int r = ubuff[i] & 0xff;
+			m_data[i][0] = (double(b));
+			m_data[i][1] = (double(g));
+			m_data[i][2] = (double(r));
+		}
+		break;
+	case 2://want gray
+		for (int i = 0; i < sz; i++) {
+			int b = ubuff[i] >> 16 & 0xff;
+			int g = ubuff[i] >> 8 & 0xff;
+			int r = ubuff[i] & 0xff;
+			m_data[i][0] = (RGB2Gray(r,g,b));
+		}
+	case 3://input Gray
+		break;
+
+
 	}
 }
 
@@ -254,8 +343,8 @@ void SLIC::performSuperpixelSLIC(
 	const int numk = kseeds.size();
 	//----------------
 	int offset = STEP;
-	//if(STEP < 8) offset = STEP*1.5;//to prevent a crash due to a very small step size
-//----------------
+	if(STEP < 8) offset = static_cast<int>(STEP*1.5);//to prevent a crash due to a very small step size
+	//----------------
 
 	vector<double> clustersize(numk, 0);
 	vector<double> inv(numk, 0);//to store 1/clustersize[k] values
@@ -425,21 +514,43 @@ void SLIC::reCutBadRegion(
 	for (int r = 0; r < m_height; r++) {
 		for (int c = 0; c < m_width; c++) {
 			if (stddist[klabels[ind]]  > D_VAR) {
-				if (RGB2Gray(m_data[ind][2], m_data[ind][1], m_data[ind][0])
-					< RGB2Gray(mean[klabels[ind]][2], mean[klabels[ind]][1], mean[klabels[ind]][0])) {
-					//灰度小的一半
-					for (int i = 0; i < m_depth; i++)
-						sigmaLow[klabels[ind]][i] += m_data[ind][i];
-					sigmaxyLow[klabels[ind]][0] += c;
-					sigmaxyLow[klabels[ind]][1] += r;
-					clustersize1[klabels[ind]]++;
-				}
-				else {//灰度大的一半
-					for (int i = 0; i < m_depth; i++)
-						sigmaHigh[klabels[ind]][i] += m_data[ind][i];
-					sigmaxyHigh[klabels[ind]][0] += c;
-					sigmaxyHigh[klabels[ind]][1] += r;
-					clustersize2[klabels[ind]]++;
+				switch (m_model & 3) {
+				case 0:
+				case 2:
+				case 3:
+					if (m_data[ind][0] > mean[klabels[ind]][0]) {
+						//灰度小的一半
+						for (int i = 0; i < m_depth; i++)
+							sigmaLow[klabels[ind]][i] += m_data[ind][i];
+						sigmaxyLow[klabels[ind]][0] += c;
+						sigmaxyLow[klabels[ind]][1] += r;
+						clustersize1[klabels[ind]]++;
+					}
+					else {//灰度大的一半
+						for (int i = 0; i < m_depth; i++)
+							sigmaHigh[klabels[ind]][i] += m_data[ind][i];
+						sigmaxyHigh[klabels[ind]][0] += c;
+						sigmaxyHigh[klabels[ind]][1] += r;
+						clustersize2[klabels[ind]]++;
+					}
+					break;
+				case 1:
+					if (RGB2Gray(m_data[ind][2], m_data[ind][1], m_data[ind][0])
+						< RGB2Gray(mean[klabels[ind]][2], mean[klabels[ind]][1], mean[klabels[ind]][0])) {
+						//灰度小的一半
+						for (int i = 0; i < m_depth; i++)
+							sigmaLow[klabels[ind]][i] += m_data[ind][i];
+						sigmaxyLow[klabels[ind]][0] += c;
+						sigmaxyLow[klabels[ind]][1] += r;
+						clustersize1[klabels[ind]]++;
+					} else {//灰度大的一半
+						for (int i = 0; i < m_depth; i++)
+							sigmaHigh[klabels[ind]][i] += m_data[ind][i];
+						sigmaxyHigh[klabels[ind]][0] += c;
+						sigmaxyHigh[klabels[ind]][1] += r;
+						clustersize2[klabels[ind]]++;
+					}
+					break;
 				}
 
 			}
@@ -1013,8 +1124,14 @@ void SLIC::enforceLabelConnectivityNew(
 // 0:use the old method
 // 1;use the new method
 //===========================================================================
-void SLIC::setModel(int model) {
+void SLIC::setModel(int model, double std) {
 	m_model = model;
+	if ((model & 3) < 2)// LAb or RGB
+		m_depth = 3;
+	else
+		m_depth = 1;
+	if ((model & 4))
+		D_VAR = std;
 }
 
 /****************************************************
