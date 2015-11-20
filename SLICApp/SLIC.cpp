@@ -655,42 +655,7 @@ void SLIC::reCutBadRegion(
 }
 
 
-//===========================================================================
-///	saveSuperpixelLabels
-///
-///	Save labels in raster scan order.
-//===========================================================================
-void SLIC::saveSuperpixelLabels(
-	const int*&					labels,
-	const int&					width,
-	const int&					height,
-	const string&				filename,
-	const string&				path) {
-#ifdef WINDOWS
-	char fname[256];
-	char extn[256];
-	_splitpath(filename.c_str(), NULL, NULL, fname, extn);
-	string temp = fname;
-	string finalpath = path + temp + string(".dat");
-#else
-	string nameandextension = filename;
-	size_t pos = filename.find_last_of("/");
-	if (pos != string::npos)//if a slash is found, then take the filename with extension
-	{
-		nameandextension = filename.substr(pos + 1);
-	}
-	string newname = nameandextension.replace(nameandextension.rfind(".") + 1, 3, "dat");//find the position of the dot and replace the 3 characters following it.
-	string finalpath = path + newname;
-#endif
 
-	int sz = width*height;
-	ofstream outfile;
-	outfile.open(finalpath.c_str(), ios::binary);
-	for (int i = 0; i < sz; i++) {
-		outfile.write((const char*)&labels[i], sizeof(int));
-	}
-	outfile.close();
-}
 
 
 
@@ -788,8 +753,8 @@ void SLIC::enforceLabelConnectivity(
 }
 
 //===========================================================================
-///	EnforceLabelConnectivityNew
-///新方法，包含了去除孤立区域
+///	enforceLabelConnectivityOnly
+/// 仅仅是深度优先重新标号
 //===========================================================================
 void SLIC::enforceLabelConnectivityNew(
 	const int*					labels,//input labels that need to be corrected to remove stray labels
@@ -851,33 +816,10 @@ void SLIC::enforceLabelConnectivityNew(
 								nlabels[nindex] = label;
 								count++;
 							}
-							else if (0 > nlabels[nindex] && adjlabel != labels[nindex])//周围除了一个标号还有另一个种标号
-								adjCount++;
-
 						}
 
 					}
 				}
-				//-------------------------------------------------------
-				// If segment size is less then a limit, assign an
-				// adjacent label found before, and decrement label count.
-				//-------------------------------------------------------
-				if (!adjCount) {
-					for (int c = 0; c < count; c++) {
-						int ind = yvec[c] * width + xvec[c];
-						nlabels[ind] = adjlabel;
-					}
-					label--;
-				}
-				else
-					if (count <= SUPSZ >> 4) {
-						for (int c = 0; c < count; c++) {
-							int ind = yvec[c] * width + xvec[c];
-							nlabels[ind] = adjlabel;
-						}
-						label--;
-					}
-
 				label++;
 			}
 			oindex++;
@@ -888,6 +830,108 @@ void SLIC::enforceLabelConnectivityNew(
 	if (xvec) delete[] xvec;
 	if (yvec) delete[] yvec;
 }
+////===========================================================================
+/////	EnforceLabelConnectivityNew
+///// 仅仅是处理小区域
+////===========================================================================
+//void SLIC::enforceLabelConnectivityNew(
+//	const int*					labels,//input labels that need to be corrected to remove stray labels
+//	const int					width,
+//	const int					height,
+//	int*						nlabels,//new labels
+//	int&						numlabels,//the number of labels changes in the end if segments are removed
+//	const int&					K) //the number of superpixels desired by the user
+//{
+//	const int dx4[4] = { -1,  0,  1,  0 };
+//	const int dy4[4] = { 0, -1,  0,  1 };
+//
+//	const int sz = width*height;
+//	const int SUPSZ = sz / K;
+//	//nlabels.resize(sz, -1);
+//	for (int i = 0; i < sz; i++) nlabels[i] = -1;
+//	int label(0);
+//	int* xvec = new int[sz];
+//	int* yvec = new int[sz];
+//	int oindex(0);
+//	int adjlabel(0);//adjacent label
+//	for (int j = 0; j < height; j++) {
+//		for (int k = 0; k < width; k++) {
+//			if (0 > nlabels[oindex]) {
+//				nlabels[oindex] = label;
+//				//--------------------
+//				// Start a new segment
+//				//--------------------
+//				xvec[0] = k;
+//				yvec[0] = j;
+//				//-------------------------------------------------------
+//				// Quickly find an adjacent label for use later if needed
+//				//-------------------------------------------------------
+//				{for (int n = 0; n < 4; n++) {
+//					int x = xvec[0] + dx4[n];
+//					int y = yvec[0] + dy4[n];
+//					if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
+//						int nindex = y*width + x;
+//						if (nlabels[nindex] >= 0) {
+//							adjlabel = nlabels[nindex];
+//							break;
+//						}
+//					}
+//				}}
+//				//用中心的值可以取一个更近的领域作为相邻，还没做
+//				int count(1);
+//				int adjCount(0);
+//				for (int c = 0; c < count; c++) {
+//					for (int n = 0; n < 4; n++) {
+//						int x = xvec[c] + dx4[n];
+//						int y = yvec[c] + dy4[n];
+//
+//						if ((x >= 0 && x < width) && (y >= 0 && y < height)) {
+//							int nindex = y*width + x;
+//
+//							if (0 > nlabels[nindex] && labels[oindex] == labels[nindex]) {
+//								xvec[count] = x;
+//								yvec[count] = y;
+//								nlabels[nindex] = label;
+//								count++;
+//							}
+//							else if (0 > nlabels[nindex] && adjlabel != labels[nindex])//周围除了一个标号还有另一个种标号
+//								adjCount++;
+//
+//						}
+//
+//					}
+//				}
+//				//-------------------------------------------------------
+//				// If segment size is less then a limit, assign an
+//				// adjacent label found before, and decrement label count.
+//				//-------------------------------------------------------
+//				if (!adjCount && 0) { //孤立区域在用于合并的时候才是多余的:
+//					for (int c = 0; c < count; c++) {
+//						int ind = yvec[c] * width + xvec[c];
+//						nlabels[ind] = adjlabel;
+//					}
+//					label--;
+//				}
+//				else
+//					if (count <= SUPSZ >> 4) {
+//						for (int c = 0; c < count; c++) {
+//							int ind = yvec[c] * width + xvec[c];
+//							nlabels[ind] = adjlabel;
+//						}
+//						label--;
+//					}
+//
+//				label++;
+//			}
+//			oindex++;
+//		}
+//	}
+//	numlabels = label;
+//
+//	if (xvec) delete[] xvec;
+//	if (yvec) delete[] yvec;
+//}
+
 
 
 

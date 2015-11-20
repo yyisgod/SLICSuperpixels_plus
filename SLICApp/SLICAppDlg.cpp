@@ -215,7 +215,7 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
 		
 		slic.drawContoursAroundSegments(img, labels, width, height, 0);
-		delete[] labels;
+		
 
 		string addPath = "_C";//append outfilename
 		std::stringstream ss;
@@ -239,6 +239,8 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		addPath += str1;
 
 		picHand.SavePicture(img, width, height, picvec[k], saveLocation, 1, addPath);// 0 is for BMP and 1 for JPEG)
+		saveSuperpixelLabels(labels, width, height, picvec[k],addPath, saveLocation);
+		delete[] labels;
 		if (img) delete[] img;
 	}
 	AfxMessageBox(L"Done!", 0, 0);

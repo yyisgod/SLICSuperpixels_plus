@@ -35,3 +35,35 @@ void yFunctions::slicFeatureNeighborGray(const vector<vector <double> >& g, int 
 		}
 	}
 }
+
+//===========================================================================
+///	saveSuperpixelLabels
+///
+///	Save labels in raster scan order.
+//===========================================================================
+void yFunctions::saveSuperpixelLabels(
+	const int*					labels,
+	const int&					width,
+	const int&					height,
+	const string&				filename,
+	const string&				addName,
+	const string&				path) {
+
+	char fname[256];
+	_splitpath_s(filename.c_str(), NULL, 0, NULL, 0, fname, 256, NULL, 0);
+	string temp = fname;
+	string finalpath = path + temp + addName + string(".m");
+
+
+	int sz = width*height;
+	ofstream outfile;
+	outfile.open(finalpath.c_str());
+	outfile << " label = [";
+	for (int i = 0; i < sz; i++) {
+		outfile << labels[i] << ' ';
+		if (i % width == width - 1)
+			outfile << ';';
+	}
+	outfile << "];";
+	outfile.close();
+}

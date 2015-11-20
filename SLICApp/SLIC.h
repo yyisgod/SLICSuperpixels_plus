@@ -33,15 +33,6 @@ public:
 	//============================================================================
 	vector<vector<double> >& getData();
 	
-	//============================================================================
-	// Save superpixel labels in a text file in raster scan order
-	//============================================================================
-	void saveSuperpixelLabels(
-		const int*&					labels,
-		const int&					width,
-		const int&					height,
-		const string&				filename,
-		const string&				path);
 
 	//============================================================================
 	// Function to draw boundaries around superpixels of a given 'color'.
