@@ -147,6 +147,20 @@ private:
 		int							n,
 		vector<vector<double> >&	kseedsl,
 		vector<vector<double> >&	kseedsxy);
+
+	//MSLIC
+	//calculate region data
+	void calRegionData(vector<vector<double>>& data, int*& klabels, int& numlabels);
+	//initial seeds on region
+	void getMSLICSeeds(vector<vector<double>>& kseeds,
+		vector<vector<double>>& data);
+	//iteration of MSLIC
+	void performMSLICcluster(vector<vector<double>>& data,
+		vector<vector<double>>& kseeds,
+		int*& klabels,
+		int& numlabels,
+		const double inv
+		);
 public:
 	//============================================================================
 	// set m_model for select old/new method.
@@ -165,6 +179,19 @@ public:
 		const int&					K,
 		const double&               compactness,
 		const vector<vector<double> >& exData = vector<vector<double> >());
+	//============================================================================
+	// the entry for MSLIC alogrithm
+	//============================================================================
+	void SLIC::doMSLIC(
+		const unsigned int*			ubuff,
+		const int					width,
+		const int					height,
+		int*&						klabels,
+		int&						numlabels,
+		const int&					K,
+		const double&               compactness,
+		const vector<vector<double> >& exData = vector<vector<double> >(),
+		const int					nIter = 1);		
 
 private:
 	int										m_width;

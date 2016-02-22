@@ -56,7 +56,7 @@ CSLICAppDlg::CSLICAppDlg(CWnd* pParent /*=NULL*/)
 	, m_IsNew(FALSE)
 	, m_nums(100)
 	, m_m(10)
-	, m_colorMode(0), m_std(5.7) {
+	, m_colorMode(0), m_std(5.7), m_runTime(0), m_UseMSLIC(FALSE), m_MSLICiter(2) {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 }
@@ -72,6 +72,9 @@ void CSLICAppDlg::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxInt(pDX, m_colorMode, 0, 3);
 	DDX_Text(pDX, IDC_EDIT_STD, m_std);
 	DDV_MinMaxDouble(pDX, m_std, 0, 100);
+	DDX_Text(pDX, IDC_EDIT_TIME, m_runTime);
+	DDX_Check(pDX, IDC_CHECK_MSLIC, m_UseMSLIC);
+	DDX_Text(pDX, IDC_EDIT_MSLIC, m_MSLICiter);
 }
 
 BEGIN_MESSAGE_MAP(CSLICAppDlg, CDialogEx)
@@ -192,6 +195,7 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		m_m *= 1.717;
 		m_std *= 1.717;
 	}
+	clock_t start = clock();
 	for (int k = 0; k < numPics; k++)
 	{
 		UINT* img = NULL;
@@ -212,7 +216,10 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 
 		vector<vector<double> > exData;
 		//slicFeatureNeighborGray(slic.getData(), height, width, exData); //º∆À„Ãÿ’˜
-		slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
+		if (m_UseMSLIC)
+			slic.doMSLIC();
+		else 
+			slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
 		
 		slic.drawContoursAroundSegments(img, labels, width, height, 0);
 		
@@ -243,6 +250,9 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		delete[] labels;
 		if (img) delete[] img;
 	}
+	clock_t end = clock();
+	m_runTime = (double)(end - start) / CLOCKS_PER_SEC;
+	UpdateData(false);
 	AfxMessageBox(L"Done!", 0, 0);
 }
 

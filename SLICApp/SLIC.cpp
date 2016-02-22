@@ -1035,6 +1035,73 @@ void SLIC::outSeeds(
 	outFile.close();
 }
 
+void SLIC::calRegionData(vector<vector<double>>& data, int *& klabels, int & numlabels){
+	int sz = m_width * m_height;
+	vector<vector<double>> sigma(numlabels, vector<double>(m_depth + 2, 0));
+	vector<double> clustersize(numlabels, 0);
+	//------------------------------------
+	//edgesum.assign(numk, 0);
+	//------------------------------------
+
+	int ind(0);
+	for (int r = 0; r < m_height; r++) {
+		for (int c = 0; c < m_width; c++) {
+			for (int i = 0; i < m_depth; i++) {
+				sigma[klabels[ind]][i] += m_data[ind][i];
+			}
+			sigma[klabels[ind]][m_depth] += c;
+			sigma[klabels[ind]][m_depth + 1] += r;
+			clustersize[klabels[ind]] += 1.0;
+			ind++;
+		}
+	}
+	vector<double> inv(numlabels, 1.0);
+	for (int k = 0; k < numlabels; k++) {
+		if (clustersize[k] <= 0) clustersize[k] = 1;
+		inv[k] = 1.0 / clustersize[k];//computing inverse now to multiply, than divide later
+	}
+
+	for (int k = 0; k < numlabels; k++) {
+		for (int i = 0; i < m_depth+2; i++) {
+			data[k][i] = sigma[k][i] * inv[k];
+		}
+	}
+}
+
+void SLIC::getMSLICSeeds(vector<vector<double>>& kseeds, vector<vector<double>>& data) {
+	int numlabels = kseeds.size();
+	int numSeeds = numlabels / 2;
+	for (int i = 0; i <= numSeeds; i += 2) {
+		kseeds.push_back(data[i]);
+	}
+}
+
+
+void SLIC::performMSLICcluster(vector<vector<double>>& data, vector<vector<double>>& kseeds, int *& klabels, int & numlabels, const double inv) {
+	for (int itr = 0; itr < 10; itr++) {
+		vector<double> distvec(numlabels, DBL_MAX);
+		for (int i = 0; i < numlabels; i++) {
+			double dist = 0;
+			for (int j = 0; j < m_depth; j++) {
+				dist += (m_data[i][j] - kseeds[n][j]) * (m_data[i][j] - kseeds[n][j]);
+			}
+
+					distxy = (x - kseedsxy[n][0])*(x - kseedsxy[n][0]) +
+						(y - kseedsxy[n][1])*(y - kseedsxy[n][1]);
+
+					//------------------------------------------------------------------------
+					dist += distxy*invwt;//dist = sqrt(dist) + sqrt(distxy*invwt);//this is more exact
+										 //------------------------------------------------------------------------
+					if (dist < distvec[i]) {
+						distvec[i] = dist;
+						klabels[i] = n;
+					}
+				}
+			}
+		}
+	}
+}
+
 double SLIC::RGB2Gray(double red, double green, double blue) {
 	return red*0.299 + green * 0.587 + blue * 0.114;
 }
@@ -1095,7 +1162,7 @@ void SLIC::doSLIC(
 	performSuperpixelSLIC(kseeds, kseedsxy, klabels, STEP, edgemag, compactness);
 	numlabels = kseeds.size();
 	int* nlabels = new int[sz];
-	if (m_model) {
+	if (m_model & 4) {
 		enforceLabelConnectivity(klabels, m_width, m_height, nlabels, numlabels, int(double(sz) / double(STEP*STEP)));
 		{for (int i = 0; i < sz; i++) klabels[i] = nlabels[i]; }
 		reCutBadRegion(kseeds, kseedsxy, klabels,numlabels, STEP, edgemag, compactness);
@@ -1108,4 +1175,34 @@ void SLIC::doSLIC(
 	}
 
 	if (nlabels) delete[] nlabels;
+}
+
+
+/*=================================================================*/
+//  main function for all MSLIC-superpixel calculation
+////////////////////////////////////////////////////////////////////////
+void SLIC::doMSLIC(
+	const unsigned int*			ubuff,
+	const int					width,
+	const int					height,
+	int*&						klabels,
+	int&						numlabels,
+	const int&					K,
+	const double&               compactness,
+	const vector<vector<double> >& exData,
+	const int					nIter) {
+	//SLIC
+	doSLIC(ubuff, width, height, klabels, numlabels, K, compactness, exData);
+	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
+	double STEP = int(sqrt(double(superpixelsize)) + 0.5);
+
+	//MSLIC methods;
+	for (int i = 1; i < nIter;i++) {
+		STEP /= 2;
+		vector<vector<double>> data(numlabels, vector<double>(m_depth+ 2));
+		calRegionData(data,klabels,numlabels,width,height);
+		vector<vector<double> > kseeds(0);
+		getMSLICSeeds(kseeds,data);
+		performMSLICcluster(data,kseeds,klabels,width,height,numlabels,STEP);
+	}
 }

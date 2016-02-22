@@ -49,4 +49,8 @@ public:
 	CComboBox m_ComboColor;
 	int m_colorMode;
 	double m_std;
+	double m_runTime;
+private:
+	BOOL m_UseMSLIC;
+	int m_MSLICiter;
 };
