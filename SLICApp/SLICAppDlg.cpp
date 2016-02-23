@@ -217,7 +217,7 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		vector<vector<double> > exData;
 		//slicFeatureNeighborGray(slic.getData(), height, width, exData); //º∆À„Ãÿ’˜
 		if (m_UseMSLIC)
-			slic.doMSLIC();
+			slic.doMSLIC(img, width, height, labels, numlabels, m_nums, m_m, exData,m_MSLICiter);
 		else 
 			slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
 		
