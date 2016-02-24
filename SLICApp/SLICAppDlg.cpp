@@ -56,7 +56,7 @@ CSLICAppDlg::CSLICAppDlg(CWnd* pParent /*=NULL*/)
 	, m_IsNew(FALSE)
 	, m_nums(100)
 	, m_m(10)
-	, m_colorMode(0), m_std(5.7), m_runTime(0), m_UseMSLIC(FALSE), m_MSLICiter(2) {
+	, m_colorMode(0), m_std(5.7), m_runTime(0), m_UseMSLIC(FALSE), m_MSLICiter(2), m_numCluster(5) {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
 }
@@ -75,6 +75,7 @@ void CSLICAppDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_TIME, m_runTime);
 	DDX_Check(pDX, IDC_CHECK_MSLIC, m_UseMSLIC);
 	DDX_Text(pDX, IDC_EDIT_MSLIC, m_MSLICiter);
+	DDX_Text(pDX, IDC_EDIT_KMEANS, m_numCluster);
 }
 
 BEGIN_MESSAGE_MAP(CSLICAppDlg, CDialogEx)
@@ -217,7 +218,7 @@ void CSLICAppDlg::OnBnClickedButtonOpen()
 		vector<vector<double> > exData;
 		//slicFeatureNeighborGray(slic.getData(), height, width, exData); //º∆À„Ãÿ’˜
 		if (m_UseMSLIC)
-			slic.doMSLIC(img, width, height, labels, numlabels, m_nums, m_m, exData,m_MSLICiter);
+			slic.doMSLIC(img, width, height, labels, numlabels, m_nums, m_m, m_MSLICiter,exData);
 		else 
 			slic.doSLIC(img, width, height, labels, numlabels,m_nums, m_m,exData);
 		

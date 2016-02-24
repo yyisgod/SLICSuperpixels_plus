@@ -53,4 +53,5 @@ public:
 private:
 	BOOL m_UseMSLIC;
 	int m_MSLICiter;
+	int m_numCluster;
 };

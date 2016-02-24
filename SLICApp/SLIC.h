@@ -161,6 +161,7 @@ private:
 		int& numlabels,
 		const double inv
 		);
+	void getKmeansSeeds(vector<vector<double>>& data, vector<vector<double>>& kseeds,int* klabels,const int STEP);
 public:
 	//============================================================================
 	// set m_model for select old/new method.
@@ -190,8 +191,9 @@ public:
 		int&						numlabels,
 		const int&					K,
 		const double&               compactness,
-		const vector<vector<double> >& exData = vector<vector<double> >(),
-		const int					nIter = 1);		
+		const int					numk,
+		const vector<vector<double> >& exData = vector<vector<double> >()
+		);		
 
 private:
 	int										m_width;

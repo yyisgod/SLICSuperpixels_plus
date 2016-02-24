@@ -1035,7 +1035,7 @@ void SLIC::outSeeds(
 	outFile.close();
 }
 
-void SLIC::calRegionData(vector<vector<double>>& data, int *& klabels, int & numlabels){
+void SLIC::calRegionData(vector<vector<double>>& data, int *& klabels, int & numlabels) {
 	int sz = m_width * m_height;
 	vector<vector<double>> sigma(numlabels, vector<double>(m_depth + 2, 0));
 	vector<double> clustersize(numlabels, 0);
@@ -1052,23 +1052,46 @@ void SLIC::calRegionData(vector<vector<double>>& data, int *& klabels, int & num
 		}
 	}
 	vector<double> inv(numlabels, 1.0);
+	//vector<vector<double> > mean(numlabels, vector<double>(m_depth / 2, 0));//均值
 	for (int k = 0; k < numlabels; k++) {
 		if (clustersize[k] <= 0) clustersize[k] = 1;
 		inv[k] = 1.0 / clustersize[k];//computing inverse now to multiply, than divide later
+		/*for (int i = 0; i < m_depth / 2; i++) {
+			mean[k][i] = sigma[k][i] * inv[k];
+		}*/
 	}
-
+	////出方差
+	//vector < vector < double> > stddist(numlabels, vector<double>(m_depth / 2,0));
+	//ind = 0;
+	//for (int r = 0; r < m_height; r++) {
+	//	for (int c = 0; c < m_width; c++) {
+	//		for (int i = 0; i < m_depth / 2; i++) {
+	//			stddist[klabels[ind]][i] += (m_data[ind][i] - mean[klabels[ind]][i])*(m_data[ind][i] - mean[klabels[ind]][i]);
+	//		}
+	//		ind++;
+	//	}
+	//}
+	//for (int k = 0; k < numlabels; k++) {
+	//	for (int i = 0; i < m_depth / 2; i++) {
+	//		data[k][m_depth/2+i] = stddist[k][i] * inv[k];
+	//	}
+	//}
 	for (int k = 0; k < numlabels; k++) {
-		for (int i = 0; i < m_depth+2; i++) {
+		for (int i = 0; i < m_depth; i++) {
 			data[k][i] = sigma[k][i] * inv[k];
 		}
+		data[k][m_depth] = sigma[k][m_depth] * inv[k];
+		data[k][m_depth+1] = sigma[k][m_depth+1] * inv[k];
 	}
 }
-
-void SLIC::getMSLICSeeds(vector<vector<double>>& kseeds, vector<vector<double>>& data) {
+void SLIC::getMSLICSeeds(vector<vector<double>>& data, vector<vector<double>>& kseeds) {
 	// data: l a b x y 
 	int numlabels = data.size();
-	for (int i = 0; i < numlabels; i+=2) {
-		kseeds.push_back(data[i]);
+	int numk = numlabels*0.618 + 1;
+	kseeds.resize(numk, vector<double>(m_depth+2, 0));
+	for (int n = 0; n < numk; n++) {
+		for (int i = 0; i < m_depth + 2; i++) 
+			kseeds[n][i] = data[n*numlabels/numk][i];
 	}
 }
 
@@ -1213,21 +1236,71 @@ void SLIC::doMSLIC(
 	int&						numlabels,
 	const int&					K,
 	const double&               compactness,
-	const vector<vector<double> >& exData,
-	const int					nIter) {
+	const int					nIter,
+	const vector<vector<double> >& exData) {
 	//SLIC
 	doSLIC(ubuff, width, height, klabels, numlabels, K, compactness, exData);
-	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
-	double STEP = int(sqrt(double(superpixelsize)) + 0.5);
-	double inv = 1.0 / ((STEP / compactness)*(STEP / compactness));
 
 	//MSLIC methods;
+	const int superpixelsize = (int)(0.5 + double(width*height) / double(K));
+	int STEP = int(sqrt(double(superpixelsize)) + 0.5);
+	double inv = 1.0 / ((STEP / compactness)*(STEP / compactness));
+	//m_depth += 3; // for std l a b;
 	for (int i = 1; i < nIter;i++) {
-		inv /= 4;
+		if (numlabels <= 2) break;
+		inv *= 0.618*0.618;
 		vector<vector<double>> data(numlabels, vector<double>(m_depth+ 2));
 		calRegionData(data,klabels,numlabels);
 		vector<vector<double> > kseeds(0);
-		getMSLICSeeds(kseeds,data);
+		getMSLICSeeds(data,kseeds);
 		performMSLICcluster(data,kseeds,klabels,numlabels,inv);
+	}
+
+	//do k-means with location information
+	/*vector<vector<double>> data(numlabels, vector<double>(m_depth+ 2));
+	calRegionData(data,klabels,numlabels);
+	vector<vector<double> > kseeds(0);
+	getKmeansSeeds(data,kseeds,klabels,STEP);
+	performMSLICcluster(data,kseeds,klabels,numlabels,inv);*/
+	//
+	//1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 请按任意键继续. . .
+}
+
+
+void SLIC::getKmeansSeeds(vector<vector<double>>& data, vector<vector<double>>& kseeds, int* klabels, const int STEP) {
+	int xstrips = (int)(0.5 + double(m_width) / double(STEP));
+	int ystrips = (int)(0.5 + double(m_height) / double(STEP));
+
+	int xerr = m_width - STEP*xstrips; if (xerr < 0) {
+		xstrips--; xerr = m_width - STEP*xstrips;
+	}
+	int yerr = m_height - STEP*ystrips; if (yerr < 0) {
+		ystrips--; yerr = m_height - STEP*ystrips;
+	}
+
+	double xerrperstrip = double(xerr) / double(xstrips);
+	double yerrperstrip = double(yerr) / double(ystrips);
+
+	int xoff = STEP / 2;
+	int yoff = STEP / 2;
+	//-------------------------
+	int numk = xstrips*ystrips;
+	//-------------------------
+	kseeds.resize(numk);
+	int n = 0;
+	for (int y = 0; y < ystrips; y++) {
+		int ye = (int)(y*yerrperstrip);
+		for (int x = 0; x < xstrips; x++) {
+			kseeds[n] = vector<double>(m_depth+2);
+			int xe = (int)(x*xerrperstrip);
+			int seedx = (x*STEP + xoff + xe);
+			int seedy = (y*STEP + yoff + ye);
+			int i = seedy*m_width + seedx;
+			int label = klabels[i];
+			for (int j = 0; j < m_depth+2; j++) {
+				kseeds[n][j] = (data[label][j]);
+			}
+			n++;
+		}
 	}
 }
